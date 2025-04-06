@@ -1,3 +1,5 @@
+#model.py
+
 import mesa
 from objects import WasteDisposalZone, Waste, RadioactivityAgent
 from agents import MyAgent
@@ -22,7 +24,8 @@ class MyModel(mesa.Model):
 
         super().__init__(seed=seed)
         self.num_agents = n
-        self.grid = mesa.space.MultiGrid(width, height, True)
+        self.grid = mesa.space.MultiGrid(width, height, torus=False)
+        self.percepts = None
 
         # Create agents
         agents = MyAgent.create_agents(model=self, n=n)
@@ -83,10 +86,28 @@ class MyModel(mesa.Model):
         z3_coords = list(product(range(2 * width // 3, width), range(height)))
         for a, (i, j) in zip(z3, z3_coords):
             self.grid.place_agent(a, (i, j))
+
+
             
+    def do(self, agent, action):
+        percepts = {}
+
+        if action == "move_random":
+            possible_steps = agent.knowledge.get("possible_steps", [])
+            if possible_steps:
+                self.grid.move_agent_to_one_of(agent, possible_steps)
+                percepts = self.grid.get_neighbors(agent.pos, moore=False, include_center=True)
+
+        # Ajouter d'autres actions ici plus tard
+
+        return percepts
         
 
     def step(self):
-        """do one step of the model"""
+        """One step of the model: ask each agent what they want to do, and execute it."""
         self.agents.shuffle_do("step")
+
+
+
+
 
