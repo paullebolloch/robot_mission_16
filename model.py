@@ -2,7 +2,7 @@
 
 import mesa
 from objects import WasteDisposalZone, Waste, RadioactivityAgent
-from agents import MyAgent
+from agents import greenAgent, yellowAgent, redAgent
 from itertools import product
 
 
@@ -10,7 +10,7 @@ from itertools import product
 class MyModel(mesa.Model):
     """A model with some number of agents."""
 
-    def __init__(self, n=10, width=10, height=10, seed=None):
+    def __init__(self, n_green_agents=10, n_yellow_agents=10, n_red_agents=10, n_green_waste=10, n_yellow_waste=10, n_red_waste=10, width=10, height=10, seed=None):
         """Initialize a MoneyModel instance.
 
         Args:
@@ -19,21 +19,36 @@ class MyModel(mesa.Model):
             height: Height of the grid.
         """
         # SolaraViz envoie un dict pour n → on le transforme
-        if isinstance(n, dict):
-            n = n.get("value", 50)
+        if isinstance(n_green_agents, dict):
+            n_green_agents = n_green_agents.get("value", 10)
+        if isinstance(n_yellow_agents, dict):
+            n_yellow_agents = n_yellow_agents.get("value", 10)
+        if isinstance(n_red_agents, dict):
+            n_red_agents = n_red_agents.get("value", 10)
+
+        if isinstance(n_green_waste, dict):
+            n_green_waste = n_green_waste.get("value", 10)
+        if isinstance(n_yellow_waste, dict):
+            n_yellow_waste = n_yellow_waste.get("value", 10)
+        if isinstance(n_red_waste, dict):
+            n_red_waste = n_red_waste.get("value", 10)
 
         super().__init__(seed=seed)
-        self.num_agents = n
+        self.num_green_agents = n_green_agents
+        self.num_yellow_agents = n_yellow_agents
+        self.num_red_agents = n_red_agents
         self.grid = mesa.space.MultiGrid(width, height, torus=False)
         self.percepts = None
 
         # Create agents
-        agents = MyAgent.create_agents(model=self, n=n)
+        green_agents = greenAgent.create_agents(model=self, n=n_green_agents)
+        yellow_agents = yellowAgent.create_agents(model=self, n=n_yellow_agents)
+        red_agents = redAgent.create_agents(model=self, n=n_red_agents)
 
         # Create objects
-        green_waste = Waste.create_agents(model=self, n=n, color = "green")
-        yellow_waste = Waste.create_agents(model=self,n=n, color = "yellow")
-        red_waste = Waste.create_agents(model=self, n=n, color = "red")
+        green_waste = Waste.create_agents(model=self, n=n_green_waste, color = "green")
+        yellow_waste = Waste.create_agents(model=self,n=n_yellow_waste, color = "yellow")
+        red_waste = Waste.create_agents(model=self, n=n_red_waste, color = "red")
 
         z1 = RadioactivityAgent.create_agents(model=self, n=width//3 * height, zone = "z1")
         z2 = RadioactivityAgent.create_agents(model=self, n=width//3 * height, zone = "z2")
@@ -41,10 +56,24 @@ class MyModel(mesa.Model):
 
         waste_disposal_zone = WasteDisposalZone.create_agents(model=self, n=1, zone = "z3")
 
-        # Create x and y positions for agents
-        x = self.rng.integers(0, self.grid.width, size=(n,))
-        y = self.rng.integers(0, self.grid.height, size=(n,))
-        for a, i, j in zip(agents, x, y):
+        # Create x and y positions for green agents
+        x = self.rng.integers(0, self.grid.width//3, size=(n_green_agents,))
+        y = self.rng.integers(0, self.grid.height, size=(n_green_agents,))
+        for a, i, j in zip(green_agents, x, y):
+            # Add the agent to a random grid cell
+            self.grid.place_agent(a, (i, j))
+
+        # Create x and y positions for yellow agents
+        x = self.rng.integers(0, 2*self.grid.width//3, size=(n_yellow_agents,))
+        y = self.rng.integers(0, self.grid.height, size=(n_yellow_agents,))
+        for a, i, j in zip(yellow_agents, x, y):
+            # Add the agent to a random grid cell
+            self.grid.place_agent(a, (i, j))
+
+        # Create x and y positions for red agents
+        x = self.rng.integers(0, self.grid.width, size=(n_red_agents,))
+        y = self.rng.integers(0, self.grid.height, size=(n_red_agents,))
+        for a, i, j in zip(red_agents, x, y):
             # Add the agent to a random grid cell
             self.grid.place_agent(a, (i, j))
 
@@ -54,10 +83,10 @@ class MyModel(mesa.Model):
 
 
         # Positionner les déchets
-        x_z1 = self.rng.integers(0, width//3, size=(n,))
-        x_z2 = self.rng.integers(width//3, 2*width//3, size=(n,))
-        x_z3 = self.rng.integers(2*width//3, width, size=(n,))
-        y = self.rng.integers(0, height, size=(n,))
+        x_z1 = self.rng.integers(0, width//3, size=(n_green_waste,))
+        x_z2 = self.rng.integers(width//3, 2*width//3, size=(n_yellow_waste,))
+        x_z3 = self.rng.integers(2*width//3, width, size=(n_red_waste,))
+        y = self.rng.integers(0, height, size=(n_green_waste+n_yellow_waste+n_red_waste,))
 
         for a, i, j in zip(green_waste, x_z1, y):
             self.grid.place_agent(a, (i, j))

@@ -2,15 +2,57 @@ import mesa
 import solara
 from mesa.visualization import make_space_component, make_plot_component, SolaraViz
 from model import MyModel
+from objects import Waste, RadioactivityAgent, WasteDisposalZone
+from agents import greenAgent, yellowAgent, redAgent
 
 
 model_params = {
-    "n": {
+    "n_green_agents": {
         "type": "SliderInt",
         "value": 10,
-        "label": "Number of agents:",
-        "min": 10,
-        "max": 100,
+        "label": "Number of green agents:",
+        "min": 1,
+        "max": 20,
+        "step": 1,
+    },
+    "n_yellow_agents": {
+        "type": "SliderInt",
+        "value": 10,
+        "label": "Number of yellow agents:",
+        "min": 1,
+        "max": 20,
+        "step": 1,
+    },
+    "n_red_agents": {
+        "type": "SliderInt",
+        "value": 10,
+        "label": "Number of red agents:",
+        "min": 1,
+        "max": 20,
+        "step": 1,
+    },
+    "n_green_waste": {
+        "type": "SliderInt",
+        "value": 10,
+        "label": "Number of green waste:",
+        "min": 1,
+        "max": 20,
+        "step": 1,
+    },
+    "n_yellow_waste": {
+        "type": "SliderInt",
+        "value": 10,
+        "label": "Number of yellow waste:",
+        "min": 1,
+        "max": 20,
+        "step": 1,
+    },
+    "n_red_waste": {
+        "type": "SliderInt",
+        "value": 10,
+        "label": "Number of red waste:",
+        "min": 1,
+        "max": 20,
         "step": 1,
     },
     "width": 15,
@@ -20,13 +62,13 @@ model_params = {
 def agent_portrayal(agent):
     # Valeurs par défaut (pour les agents mobiles)
     portrayal = {
-        "color": "blue",
-        "size": 50,         # taille standard pour agents (mobiles)
+        "color": "lightgreen",
+        "size": 100,         # taille standard pour agents (mobiles)
         "marker": "o",      # cercle
         "zorder": 2
     }
 
-    if hasattr(agent, "radioactivity"):
+    if isinstance(agent, RadioactivityAgent) or isinstance(agent, WasteDisposalZone):
         if agent.radioactivity == -1:
             # WasteDisposalZone
             portrayal["color"] = "black"
@@ -49,12 +91,18 @@ def agent_portrayal(agent):
             portrayal["marker"] = "s"
             portrayal["zorder"] = 0
 
-    elif hasattr(agent, "color"):
+    elif isinstance(agent, Waste):
         # Waste
         portrayal["color"] = agent.color
         portrayal["size"] = 30  # légèrement plus petit que les agents
         portrayal["marker"] = "o"
         portrayal["zorder"] = 3
+
+    elif isinstance(agent, yellowAgent):
+        portrayal["color"] = "gold"
+    
+    elif isinstance(agent, redAgent):
+        portrayal["color"] = "red"
 
     return portrayal
 
