@@ -7,6 +7,7 @@ import mesa
 from agents import greenAgent, redAgent, yellowAgent
 from objects import RadioactivityAgent, Waste, WasteDisposalZone
 from utils import next_waste_color
+from mesa.datacollection import DataCollector
 
 
 class MyModel(mesa.Model):
@@ -41,6 +42,10 @@ class MyModel(mesa.Model):
         self.num_red_agents = n_red_agents
         self.grid = mesa.space.MultiGrid(width, height, torus=False)
         self.percepts = None
+        self.datacollector = DataCollector(model_reporters={
+        "Green Waste": lambda m: sum(isinstance(a, Waste) and a.color == "green" for a in m.agents),
+        "Yellow Waste": lambda m: sum(isinstance(a, Waste) and a.color == "yellow" for a in m.agents),
+        "Red Waste": lambda m: sum(isinstance(a, Waste) and a.color == "red" for a in m.agents)})
 
         # Create agents
         green_agents = greenAgent.create_agents(model=self, n=n_green_agents)
@@ -157,7 +162,7 @@ class MyModel(mesa.Model):
                     self.grid.place_agent(agent.has_waste, coord)
                     waste_to_remove = agent.has_waste
                     self.grid.remove_agent(waste_to_remove)
-                    #waste.remove()
+                    agent.has_waste.remove()
                     agent.has_waste = None
                     agent.hold[2] = 0
 
@@ -243,7 +248,12 @@ class MyModel(mesa.Model):
 
     def step(self):
         """One step of the model: ask each agent what they want to do, and execute it."""
+        self.datacollector.collect(self)
         self.agents.shuffle_do("step")
+         # Récupération des données
+        #df = self.datacollector.get_model_vars_dataframe()
+        #print("Collected data:")
+        #print(df)
 
 
 
