@@ -1,9 +1,20 @@
 import mesa
 import solara
+import pandas as pd
+import matplotlib.pyplot as plt
 from mesa.visualization import make_space_component, make_plot_component, SolaraViz
 from model import MyModel
 from objects import Waste, RadioactivityAgent, WasteDisposalZone
 from agents import greenAgent, yellowAgent, redAgent
+from mesa.datacollection import DataCollector
+from mesa.visualization.utils import update_counter
+
+def compute_gini(model):
+    agent_wealths = [agent.pos for agent in model.agents]
+    x = sorted(agent_wealths)
+    n = model.num_agents
+    B = sum(xi * (n - i) for i, xi in enumerate(x)) / (n * sum(x))
+    return 1 + (1 / n) - 2 * B
 
 
 model_params = {
@@ -11,7 +22,7 @@ model_params = {
         "type": "SliderInt",
         "value": 10,
         "label": "Number of green agents:",
-        "min": 1,
+        "min": 0,
         "max": 20,
         "step": 1,
     },
@@ -19,7 +30,7 @@ model_params = {
         "type": "SliderInt",
         "value": 10,
         "label": "Number of yellow agents:",
-        "min": 1,
+        "min": 0,
         "max": 20,
         "step": 1,
     },
@@ -27,7 +38,7 @@ model_params = {
         "type": "SliderInt",
         "value": 10,
         "label": "Number of red agents:",
-        "min": 1,
+        "min": 0,
         "max": 20,
         "step": 1,
     },
@@ -35,7 +46,7 @@ model_params = {
         "type": "SliderInt",
         "value": 10,
         "label": "Number of green waste:",
-        "min": 1,
+        "min": 0,
         "max": 20,
         "step": 1,
     },
@@ -43,7 +54,7 @@ model_params = {
         "type": "SliderInt",
         "value": 10,
         "label": "Number of yellow waste:",
-        "min": 1,
+        "min": 0,
         "max": 20,
         "step": 1,
     },
@@ -51,7 +62,7 @@ model_params = {
         "type": "SliderInt",
         "value": 10,
         "label": "Number of red waste:",
-        "min": 1,
+        "min": 0,
         "max": 20,
         "step": 1,
     },
@@ -107,6 +118,31 @@ def agent_portrayal(agent):
     return portrayal
 
 
+@solara.component
+def WastePlot(model):
+    update_counter.get()
+    if model is None:
+        return
+
+    df = model.datacollector.get_model_vars_dataframe()
+    if df.empty:
+        return solara.Text("Pas encore de données. Cliquez sur 'Step' ou 'Run' pour démarrer la simulation.")
+
+    fig, ax = plt.subplots()
+    if "Green Waste" in df.columns:
+        ax.plot(df.index, df["Green Waste"], label="Green Waste", color="green")
+    if "Yellow Waste" in df.columns:
+        ax.plot(df.index, df["Yellow Waste"], label="Yellow Waste", color="gold")
+    if "Red Waste" in df.columns:
+        ax.plot(df.index, df["Red Waste"], label="Red Waste", color="red")
+
+    ax.set_title("Évolution des types de déchets")
+    ax.set_xlabel("Step")
+    ax.set_ylabel("Nombre")
+    ax.legend()
+
+    solara.FigureMatplotlib(fig)
+
 
 @solara.component
 def Page():
@@ -119,11 +155,14 @@ def Page():
 
     page = SolaraViz(
         money_model,
-        components=[SpaceGraph],
+        components=[SpaceGraph,
+                    WastePlot],
         model_params=model_params,
         name="Robot Mission",
     )
     return page
+
+
 
 
 #solara run server.py
