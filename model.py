@@ -123,10 +123,20 @@ class MyModel(mesa.Model):
     def do(self, agent, action):
         percepts = {}
 
-        if action == "move_random":
-            possible_steps = agent.knowledge.get("possible_steps", [])
-            if possible_steps:
-                self.grid.move_agent_to_one_of(agent, possible_steps)
+        # Positions que l'agent croit possible
+        possible_steps = agent.knowledge.get("possible_steps", [])
+
+        # Positions occupées par d'autres agents mobiles
+        mobile_agent_types = (greenAgent, yellowAgent, redAgent)
+        occupied_positions = {other_agent.pos for other_agent in self.agents 
+        if isinstance(other_agent, mobile_agent_types) and other_agent!= agent}
+
+        # Supprimer les positions occupées par d'autres agents mobiles
+        possible_steps = [pos for pos in possible_steps if pos not in occupied_positions]
+
+        if action == "move_random" and possible_steps:
+            self.grid.move_agent_to_one_of(agent, possible_steps)
+            percepts = self.grid.get_neighbors(agent.pos, moore=False, include_center=True)
                 
         elif action == 'set_down':
             waste = agent.get_waste(agent.pos)[0]  # find is there is already a waste in the cell
@@ -154,7 +164,7 @@ class MyModel(mesa.Model):
                 # code for removing the waste from the grid
                 self.grid.remove_agent(waste)
                 waste.remove()
-                
+
 
         elif action == 'pick':
             # no risk of being unable to do the pick action
@@ -167,10 +177,43 @@ class MyModel(mesa.Model):
                 agent.has_waste = waste
                 agent.hold = [1, 0, 0]
                 
+        #percepts = self.grid.get_neighbors(agent.pos, moore=False, include_center=True)
+        
+        elif action == "move_toward" and possible_steps:
+            # Stratégie pour l'agent vert
+            if isinstance(agent, greenAgent):
+                moved = False
+
+                # Priorité : aller à droite
+
+                for pos in possible_steps:
+                    radio = 0
+                    for agent_radio in self.grid.get_cell_list_contents(pos):
+                        if isinstance(agent_radio,RadioactivityAgent):
+                            radio = agent_radio.radioactivity
+                    if pos[0] == agent.pos[0] + 1 and radio < 0.33:
+                        self.grid.move_agent(agent, pos)
+                        moved = True
+                        break
+
+                # Sinon : aller en haut ou en bas
+                if not moved:
+                    for pos in possible_steps:
+                        if pos[1] in (agent.pos[1] + 1, agent.pos[1] - 1):
+                            self.grid.move_agent(agent, pos)
+                            moved = True
+                            break
+
+                # Sinon : déplacement aléatoire
+                if not moved:
+                    self.grid.move_agent_to_one_of(agent, possible_steps)
+
         percepts = self.grid.get_neighbors(agent.pos, moore=False, include_center=True)
         
         return percepts
         
+
+
 
     def step(self):
         """One step of the model: ask each agent what they want to do, and execute it."""
