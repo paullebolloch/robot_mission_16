@@ -182,6 +182,7 @@ class greenAgent(mesa.Agent):
         """Execute the decided action."""
         return self.next_action[-1]
         
+    
     def step(self):
         """Execute the agent's step."""
         
@@ -245,17 +246,22 @@ class yellowAgent(mesa.Agent):
             if agent.radioactivity >= 0.66:
                 impossible_steps.append(agent.pos)
 
+        # Update possible steps knowledge
         for position in self.model.grid.get_neighborhood(self.pos, moore=False):
             if position not in impossible_steps:
                 self.knowledge["possible_steps"].append(position)
 
+        # Default action
         self.next_action.append("move_random")
+
+        # If 
 
 
     def do(self):
         """Execute the decided action."""
         return self.next_action[-1]
         
+
     def step(self):
         """Execute the agent's step."""
         
@@ -317,10 +323,12 @@ class redAgent(mesa.Agent):
         
         # Agent want to be in the good zone (red can go anywhere)
 
+        # Update possible steps knowledge
         for position in self.model.grid.get_neighborhood(self.pos, moore=False):
             if position not in impossible_steps:
                 self.knowledge["possible_steps"].append(position)
 
+        # Default action
         self.next_action.append("move_random")
 
 
