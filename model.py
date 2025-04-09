@@ -1,16 +1,18 @@
 #model.py
 
-import mesa
-from objects import WasteDisposalZone, Waste, RadioactivityAgent
-from agents import greenAgent, yellowAgent, redAgent
 from itertools import product
 
+import mesa
+
+from agents import greenAgent, redAgent, yellowAgent
+from objects import RadioactivityAgent, Waste, WasteDisposalZone
+from utils import next_waste_color
 
 
 class MyModel(mesa.Model):
     """A model with some number of agents."""
 
-    def __init__(self, n_green_agents=10, n_yellow_agents=10, n_red_agents=10, n_green_waste=10, n_yellow_waste=10, n_red_waste=10, width=10, height=10, seed=None):
+    def __init__(self, n_green_agents=3, n_yellow_agents=0, n_red_agents=0, n_green_waste=10, n_yellow_waste=10, n_red_waste=10, width=10, height=10, seed=None):
         """Initialize a MoneyModel instance.
 
         Args:
@@ -125,10 +127,48 @@ class MyModel(mesa.Model):
             possible_steps = agent.knowledge.get("possible_steps", [])
             if possible_steps:
                 self.grid.move_agent_to_one_of(agent, possible_steps)
-                percepts = self.grid.get_neighbors(agent.pos, moore=False, include_center=True)
+                
+        elif action == 'set_down':
+            waste = agent.get_waste(agent.pos)[0]  # find is there is already a waste in the cell
+            if waste is None:
+                # if its free move the waste held by the agent to this place
+                coord = agent.pos
+                self.grid.place_agent(agent.has_waste, coord)
+                
+        elif action == 'merge':
+            # no risk of being unable to do the merge action
+            if agent.get_waste(agent.pos)[0] is not None:
+                waste = agent.get_waste(agent.pos)[0]
+                # the agent merge the waste with the existing held, means he creates a new waste agent
+                new_waste_color = next_waste_color(waste.color)
+                # new_waste = Waste(self, new_waste_color)
+                new_waste = Waste.create_agents(model=self,n=1, color = new_waste_color)[0] # bien prendre le premier élément car renvoie une liste d'agents
+                
+                old_waste = agent.has_waste
+                
+                
+                old_waste.remove()
+                agent.has_waste = new_waste
+                agent.hold = [0,1, 0]
+            
+                # code for removing the waste from the grid
+                self.grid.remove_agent(waste)
+                waste.remove()
+                
 
-        # Ajouter d'autres actions ici plus tard
-
+        elif action == 'pick':
+            # no risk of being unable to do the pick action
+            if agent.get_waste(agent.pos)[0] is not None:
+                waste = agent.get_waste(agent.pos)[0]
+                # code for removing the waste from the grid
+                
+                self.grid.remove_agent(waste)
+                # the agent take the waste 
+                agent.has_waste = waste
+                agent.hold = [1, 0, 0]
+                
+        percepts = self.grid.get_neighbors(agent.pos, moore=False, include_center=True)
+        
         return percepts
         
 
