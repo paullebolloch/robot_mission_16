@@ -102,7 +102,7 @@ def agent_portrayal(agent):
         portrayal["color"] = "gold"
     
     elif isinstance(agent, redAgent):
-        portrayal["color"] = "red"
+        portrayal["color"] = "orangered"
 
     return portrayal
 
