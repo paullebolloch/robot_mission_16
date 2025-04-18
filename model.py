@@ -1,13 +1,12 @@
-#model.py
-
 from itertools import product
 
 import mesa
+from mesa.datacollection import DataCollector
 
 from agents import greenAgent, redAgent, yellowAgent
+from communication.message.MessageService import MessageService
 from objects import RadioactivityAgent, Waste, WasteDisposalZone
 from utils import next_waste_color
-from mesa.datacollection import DataCollector
 
 
 class MyModel(mesa.Model):
@@ -46,6 +45,8 @@ class MyModel(mesa.Model):
         "Green Waste": lambda m: sum(isinstance(a, Waste) and a.color == "green" for a in m.agents),
         "Yellow Waste": lambda m: sum(isinstance(a, Waste) and a.color == "yellow" for a in m.agents),
         "Red Waste": lambda m: sum(isinstance(a, Waste) and a.color == "red" for a in m.agents)})
+        
+        MessageService.get_instance().set_instant_delivery(False)
 
         # Create agents
         green_agents = greenAgent.create_agents(model=self, n=n_green_agents)

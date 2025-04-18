@@ -1,7 +1,7 @@
-#agents.py
-
 import mesa
 
+from communication.agent.CommunicatingAgent import CommunicatingAgent
+from communication.message.Message import Message
 from objects import RadioactivityAgent, Waste, WasteDisposalZone
 from utils import map_waste_color
 
@@ -72,11 +72,11 @@ from utils import map_waste_color
         '''
 
 
-class greenAgent(mesa.Agent):
+class greenAgent(CommunicatingAgent):
     """An agent with fixed initial knowledge."""
 
     def __init__(self, model):
-        super().__init__(model)
+        super().__init__(model, name=f"green-{id(self)}")
         self.has_waste = None # object agent waste
         self.hold = [0,0,0]
         self.knowledge = {"grid_size": (self.model.grid.width, self.model.grid.height),
@@ -136,10 +136,29 @@ class greenAgent(mesa.Agent):
         # Get current position
         x, y = self.pos[0], self.pos[1]
 
+
+        # Using the speaking model to get information
+
+    
+
+
+
+
         # is it on the target ? (i.e. the radioactivity at the right is 0.33 < . < 0.66)
         right_cell = (x+1, y)
         if self.get_radioactivity(right_cell) >=0.33 and self.hold == [0,1,0]:
             self.next_action.append("drop")
+
+            for other_agent in self.model.agents:
+                if other_agent != self:
+                    message = Message(
+                        exp=self.get_name(),
+                        dest=other_agent.get_name(),
+                        performative="inform",
+                        content={"type": "drop", "position": self.pos}
+                    )
+                    self.send_message(message)
+
             return 
 
         
@@ -212,6 +231,9 @@ class yellowAgent(mesa.Agent):
         self.next_action = []
         self.agent_color = "yellow"
 
+        # Nouvel attribut pour savoir où aller pour récupérer le déchet 
+        self.target = None
+
 
     def get_radioactivity(self, position) -> float:
         (x,y) = position
@@ -255,6 +277,19 @@ class yellowAgent(mesa.Agent):
 
         # Get current position
         x, y = self.pos[0], self.pos[1]
+
+        
+        # Récupère la position par message quand un vert drop un déchet et le communique
+        # Met à jour sa target si elle n'existe pas 
+        
+            
+        for message in self.get_new_messages():
+            if message.get_performative() == "inform":
+                content = message.get_content()
+                if content.get("type") == "drop":
+                    waste_pos = content.get("position")
+                    if self.target is None:
+                        self.target = waste_pos
 
         # is it on the target ? (i.e. the radioactivity at the right is 0.33 < . < 0.66)
         right_cell = (x+1, y)
