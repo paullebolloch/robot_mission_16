@@ -18,6 +18,10 @@ class MessageService:
         """ Static access method.
         """
         return MessageService.__instance
+    
+    @staticmethod
+    def reset_instance():
+        MessageService.__instance = None
 
     def __init__(self, model,instant_delivery=True):
         """ Create a new MessageService object.

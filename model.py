@@ -9,7 +9,20 @@ from objects import RadioactivityAgent, Waste, WasteDisposalZone
 from utils import next_waste_color
 
 
-class MyModel(mesa.Model):
+class SpeakingModel(mesa.Model):
+    """ """
+    def __init__(self, seed):
+        super().__init__(seed=seed)
+        
+        MessageService.reset_instance()
+        self.__messages_service = MessageService(self)
+        self.running = True
+
+    def step(self):
+        self.__messages_service.dispatch_messages()
+        self.agents.shuffle_do("step")
+
+class MyModel(SpeakingModel):
     """A model with some number of agents."""
 
     def __init__(self, n_green_agents=3, n_yellow_agents=0, n_red_agents=0, n_green_waste=10, n_yellow_waste=10, n_red_waste=10, width=10, height=10, seed=None):
@@ -140,10 +153,30 @@ class MyModel(mesa.Model):
         # Supprimer les positions occupées par d'autres agents mobiles
         possible_steps = [pos for pos in possible_steps if pos not in occupied_positions]
 
+
+        # Définition des comportements de mouvement ciblés
+
         if action == "move_random" and possible_steps:
             self.grid.move_agent_to_one_of(agent, possible_steps)
             percepts = self.grid.get_neighbors(agent.pos, moore=False, include_center=True)
-                
+
+        elif action == "move_up":
+            if (agent.pos[0], agent.pos[1]+1) in possible_steps:
+                self.grid.move_agent(agent, (agent.pos[0], agent.pos[1]+1))
+
+        elif action == "move_down":
+            if (agent.pos[0], agent.pos[1] - 1) in possible_steps:
+                self.grid.move_agent(agent, (agent.pos[0], agent.pos[1] - 1))
+
+        elif action == "move_left":
+            if (agent.pos[0] - 1, agent.pos[1]) in possible_steps:
+                self.grid.move_agent(agent, (agent.pos[0] - 1, agent.pos[1]))
+
+        elif action == "move_right":
+            if (agent.pos[0] + 1, agent.pos[1]) in possible_steps:
+                self.grid.move_agent(agent, (agent.pos[0] + 1, agent.pos[1]))
+
+
         elif action == "drop":
             waste = agent.get_waste(agent.pos)[0]  # find is there is already a waste in the cell
             if waste is None:

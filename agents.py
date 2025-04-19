@@ -1,9 +1,8 @@
-import mesa
 
 from communication.agent.CommunicatingAgent import CommunicatingAgent
 from communication.message.Message import Message
 from objects import RadioactivityAgent, Waste, WasteDisposalZone
-from utils import map_waste_color
+from utils import choose_move_to_target, map_waste_color
 
 '''class MyAgent(mesa.Agent):
     """An agent with fixed initial knowledge."""
@@ -150,11 +149,11 @@ class greenAgent(CommunicatingAgent):
             self.next_action.append("drop")
 
             for other_agent in self.model.agents:
-                if other_agent != self:
+                if isinstance(other_agent, yellowAgent) and other_agent != self:
                     message = Message(
-                        exp=self.get_name(),
-                        dest=other_agent.get_name(),
-                        performative="inform",
+                        from_agent=self.get_name(),
+                        to_agent=other_agent.get_name(),
+                        message_performative=107,
                         content={"type": "drop", "position": self.pos}
                     )
                     self.send_message(message)
@@ -213,11 +212,11 @@ class greenAgent(CommunicatingAgent):
 
 
 
-class yellowAgent(mesa.Agent):
+class yellowAgent(CommunicatingAgent):
     """An agent with fixed initial knowledge."""
 
     def __init__(self, model):
-        super().__init__(model)
+        super().__init__(model, name=f"yellow-{id(self)}")
         self.has_waste = None # object agent waste
         self.hold = [0,0,0]
         self.knowledge = {"grid_size": (self.model.grid.width, self.model.grid.height),
@@ -278,13 +277,15 @@ class yellowAgent(mesa.Agent):
         # Get current position
         x, y = self.pos[0], self.pos[1]
 
+        # Si il a atteint sa target il la supprime
+        if self.target  == self.pos:
+            self.target = None
         
         # Récupère la position par message quand un vert drop un déchet et le communique
         # Met à jour sa target si elle n'existe pas 
-        
             
         for message in self.get_new_messages():
-            if message.get_performative() == "inform":
+            if message.get_performative() == 107:
                 content = message.get_content()
                 if content.get("type") == "drop":
                     waste_pos = content.get("position")
@@ -295,6 +296,17 @@ class yellowAgent(mesa.Agent):
         right_cell = (x+1, y)
         if self.get_radioactivity(right_cell) >=0.66 and self.hold == [0,0,1]:
             self.next_action.append("drop")
+
+            for other_agent in self.model.agents:
+                if isinstance(other_agent, redAgent) and other_agent != self:
+                    message = Message(
+                        from_agent=self.get_name(),
+                        to_agent=other_agent.get_name(),
+                        message_performative=107,
+                        content={"type": "drop", "position": self.pos}
+                    )
+                    self.send_message(message)
+
             return 
 
         
@@ -328,7 +340,11 @@ class yellowAgent(mesa.Agent):
                 if position not in impossible_steps:
                     self.knowledge["possible_steps"].append(position)
 
-            self.next_action.append("move_random")
+            if self.target is not None:
+                next_move = choose_move_to_target(self.target, self.pos, self.knowledge["possible_steps"])
+                self.next_action.append("move_"+next_move)
+            else:
+                self.next_action.append("move_random")
 
             return 
 
@@ -351,11 +367,11 @@ class yellowAgent(mesa.Agent):
 
 
 
-class redAgent(mesa.Agent):
+class redAgent(CommunicatingAgent):
     """An agent with fixed initial knowledge."""
 
     def __init__(self, model):
-        super().__init__(model)
+        super().__init__(model, name=f"red-{id(self)}")
         self.has_waste = None # object agent waste
         self.hold = [0,0,0]
         self.knowledge = {"grid_size": (self.model.grid.width, self.model.grid.height),
@@ -368,6 +384,9 @@ class redAgent(mesa.Agent):
             "neighbors": []}
         self.next_action = []
         self.agent_color = "red"
+
+
+        self.target = None
 
     def get_radioactivity(self, position) -> float:
         (x,y) = position
@@ -427,7 +446,16 @@ class redAgent(mesa.Agent):
                 self.next_action.append("pick")
                 return 
 
-        
+        # Récupère la position par message quand un vert drop un déchet et le communique
+        # Met à jour sa target si elle n'existe pas 
+            
+        for message in self.get_new_messages():
+            if message.get_performative() == 107:
+                content = message.get_content()
+                if content.get("type") == "drop":
+                    waste_pos = content.get("position")
+                    if self.target is None:
+                        self.target = waste_pos
 
         # Determine possible steps (only cells that are not occupied by other MyAgent)
         impossible_steps = []
@@ -442,7 +470,12 @@ class redAgent(mesa.Agent):
             if position not in impossible_steps:
                 self.knowledge["possible_steps"].append(position)
 
-        self.next_action.append("move_random")
+        if self.target is not None:
+                next_move = choose_move_to_target(self.target, self.pos, self.knowledge["possible_steps"])
+                self.next_action.append("move_"+next_move)
+        else:
+            self.next_action.append("move_random")
+
 
         return 
 
