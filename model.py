@@ -1,16 +1,30 @@
-#model.py
-
 from itertools import product
 
 import mesa
-
-from agents import greenAgent, redAgent, yellowAgent
-from objects import RadioactivityAgent, Waste, WasteDisposalZone
-from utils import next_waste_color
 from mesa.datacollection import DataCollector
 
+from agents import greenAgent, redAgent, yellowAgent
+from communication.message.MessageService import MessageService
+from objects import RadioactivityAgent, Waste, WasteDisposalZone
+from utils import next_waste_color
 
-class MyModel(mesa.Model):
+import numpy as np
+
+
+class SpeakingModel(mesa.Model):
+    """ """
+    def __init__(self, seed):
+        super().__init__(seed=seed)
+        
+        MessageService.reset_instance()
+        self.__messages_service = MessageService(self)
+        self.running = True
+
+    def step(self):
+        self.__messages_service.dispatch_messages()
+        self.agents.shuffle_do("step")
+
+class MyModel(SpeakingModel):
     """A model with some number of agents."""
 
     def __init__(self, n_green_agents=3, n_yellow_agents=0, n_red_agents=0, n_green_waste=10, n_yellow_waste=10, n_red_waste=10, width=10, height=10, seed=None):
@@ -46,6 +60,8 @@ class MyModel(mesa.Model):
         "Green Waste": lambda m: sum(isinstance(a, Waste) and a.color == "green" for a in m.agents),
         "Yellow Waste": lambda m: sum(isinstance(a, Waste) and a.color == "yellow" for a in m.agents),
         "Red Waste": lambda m: sum(isinstance(a, Waste) and a.color == "red" for a in m.agents)})
+        
+        MessageService.get_instance().set_instant_delivery(False)
 
         # Create agents
         green_agents = greenAgent.create_agents(model=self, n=n_green_agents)
@@ -57,11 +73,11 @@ class MyModel(mesa.Model):
         yellow_waste = Waste.create_agents(model=self,n=n_yellow_waste, color = "yellow")
         red_waste = Waste.create_agents(model=self, n=n_red_waste, color = "red")
 
-        z1 = RadioactivityAgent.create_agents(model=self, n=width//3 * height, zone = "z1")
-        z2 = RadioactivityAgent.create_agents(model=self, n=width//3 * height, zone = "z2")
-        z3 = RadioactivityAgent.create_agents(model=self, n=width//3 * height, zone = "z3")
+        z1 = RadioactivityAgent.create_agents(model=self, n=(width//3) * height, zone = "z1")
+        z2 = RadioactivityAgent.create_agents(model=self, n=(width//3) * height, zone = "z2")
+        z3 = RadioactivityAgent.create_agents(model=self, n=(width//3 - 1) * height, zone = "z3")
 
-        waste_disposal_zone = WasteDisposalZone.create_agents(model=self, n=1, zone = "z3")
+        waste_disposal_zone = WasteDisposalZone.create_agents(model=self, n=height, zone = "z3")
 
         # Create x and y positions for green agents
         x = self.rng.integers(0, self.grid.width//3, size=(n_green_agents,))
@@ -86,13 +102,18 @@ class MyModel(mesa.Model):
 
 
         # Positionner la disposal zone
-        self.grid.place_agent(waste_disposal_zone[0], (width-1,height//2))
+        y = np.array([k for k in range(self.grid.height)])
+        x = np.array([height-1 for _ in range(self.grid.height)])
+        for a, i, j in zip(waste_disposal_zone, x, y):
+            # Add the agent to a random grid cell
+            self.grid.place_agent(a, (i, j))
+       
 
 
         # Positionner les déchets
         x_z1 = self.rng.integers(0, width//3, size=(n_green_waste,))
         x_z2 = self.rng.integers(width//3, 2*width//3, size=(n_yellow_waste,))
-        x_z3 = self.rng.integers(2*width//3, width, size=(n_red_waste,))
+        x_z3 = self.rng.integers(2*width//3, width-1, size=(n_red_waste,))
         y = self.rng.integers(0, height, size=(n_green_waste+n_yellow_waste+n_red_waste,))
 
         for a, i, j in zip(green_waste, x_z1, y):
@@ -119,7 +140,7 @@ class MyModel(mesa.Model):
             self.grid.place_agent(a, (i, j))
 
         # Zone z3 (rouge)
-        z3_coords = list(product(range(2 * width // 3, width), range(height)))
+        z3_coords = list(product(range(2 * width // 3, width-1), range(height)))
         for a, (i, j) in zip(z3, z3_coords):
             self.grid.place_agent(a, (i, j))
 
@@ -139,10 +160,30 @@ class MyModel(mesa.Model):
         # Supprimer les positions occupées par d'autres agents mobiles
         possible_steps = [pos for pos in possible_steps if pos not in occupied_positions]
 
+
+        # Définition des comportements de mouvement ciblés
+
         if action == "move_random" and possible_steps:
             self.grid.move_agent_to_one_of(agent, possible_steps)
             percepts = self.grid.get_neighbors(agent.pos, moore=False, include_center=True)
-                
+
+        elif action == "move_up":
+            if (agent.pos[0], agent.pos[1]+1) in possible_steps:
+                self.grid.move_agent(agent, (agent.pos[0], agent.pos[1]+1))
+
+        elif action == "move_down":
+            if (agent.pos[0], agent.pos[1] - 1) in possible_steps:
+                self.grid.move_agent(agent, (agent.pos[0], agent.pos[1] - 1))
+
+        elif action == "move_left":
+            if (agent.pos[0] - 1, agent.pos[1]) in possible_steps:
+                self.grid.move_agent(agent, (agent.pos[0] - 1, agent.pos[1]))
+
+        elif action == "move_right":
+            if (agent.pos[0] + 1, agent.pos[1]) in possible_steps:
+                self.grid.move_agent(agent, (agent.pos[0] + 1, agent.pos[1]))
+
+
         elif action == "drop":
             waste = agent.get_waste(agent.pos)[0]  # find is there is already a waste in the cell
             if waste is None:
@@ -159,10 +200,10 @@ class MyModel(mesa.Model):
                     agent.hold[2] = 0
                 elif isinstance(agent, redAgent):
                     coord = agent.pos
-                    self.grid.place_agent(agent.has_waste, coord)
-                    waste_to_remove = agent.has_waste
-                    self.grid.remove_agent(waste_to_remove)
-                    agent.has_waste.remove()
+                    if agent.has_waste is not None:
+                        self.grid.place_agent(agent.has_waste, coord)
+                        self.grid.remove_agent(agent.has_waste)
+                        agent.has_waste.remove()
                     agent.has_waste = None
                     agent.hold[2] = 0
 
@@ -202,11 +243,11 @@ class MyModel(mesa.Model):
                 agent.has_waste = waste
 
                 if isinstance(agent, greenAgent):
-                    agent.hold = [1, 0, 0]
+                    agent.hold[0] += 1
                 elif isinstance(agent, yellowAgent):
-                    agent.hold = [0, 1, 0]
+                    agent.hold[1] += 1
                 elif isinstance(agent, redAgent):
-                    agent.hold = [0, 0, 1]
+                    agent.hold[2] += 1
                 
         #percepts = self.grid.get_neighbors(agent.pos, moore=False, include_center=True)
         
@@ -246,16 +287,33 @@ class MyModel(mesa.Model):
 
 
 
-    def step(self):
-        """One step of the model: ask each agent what they want to do, and execute it."""
-        self.datacollector.collect(self)
-        self.agents.shuffle_do("step")
+    #def step(self):
+    #    """One step of the model: ask each agent what they want to do, and execute it."""
+    #   self.datacollector.collect(self)
+    #    self.agents.shuffle_do("step")
          # Récupération des données
         #df = self.datacollector.get_model_vars_dataframe()
         #print("Collected data:")
         #print(df)
 
+    def step(self):
+        """One step of the model: handle messaging and agent actions in two random phases."""
+        self.datacollector.collect(self)
 
+        super().step()
+        # Phase 1 : tous les agents reçoivent les messages
+        agents_list = list(self.agents)
+        self.random.shuffle(agents_list)
+        for agent in agents_list:
+            if hasattr(agent, "step_messages_only"):
+                agent.step_messages_only()
+
+        # Phase 2 : tous les agents délibèrent et agissent
+        agents_list = list(self.agents)
+        self.random.shuffle(agents_list)
+        for agent in agents_list:
+            if hasattr(agent, "step_logic_only"):
+                agent.step_logic_only()
 
 
 
