@@ -74,7 +74,7 @@ def agent_portrayal(agent):
     # Valeurs par défaut (pour les agents mobiles)
     portrayal = {
         "color": "lightgreen",
-        "size": 100,         # taille standard pour agents (mobiles)
+        "size": 200,         # taille standard pour agents (mobiles)
         "marker": "o",      # cercle
         "zorder": 2
     }
@@ -87,26 +87,31 @@ def agent_portrayal(agent):
             portrayal["marker"] = "s"  # carré
             portrayal["zorder"] = 1
         elif agent.zone == "z1":
-            portrayal["color"] = "mediumseagreen"
+            portrayal["color"] = "honeydew"
             portrayal["size"] = 100
             portrayal["marker"] = "s"
             portrayal["zorder"] = 0
         elif agent.zone == "z2":
-            portrayal["color"] = "khaki"
+            portrayal["color"] = "lemonchiffon"
             portrayal["size"] = 100
             portrayal["marker"] = "s"
             portrayal["zorder"] = 0
         elif agent.zone == "z3":
-            portrayal["color"] = "lightcoral"
+            portrayal["color"] = "mistyrose"
             portrayal["size"] = 100
             portrayal["marker"] = "s"
             portrayal["zorder"] = 0
 
     elif isinstance(agent, Waste):
         # Waste
-        portrayal["color"] = agent.color
+        if agent.color == "green":
+            portrayal["color"] = "green"
+        elif agent.color == "yellow":
+            portrayal["color"] = "goldenrod"
+        elif agent.color == "red":
+            portrayal["color"] = "firebrick"
         portrayal["size"] = 30  # légèrement plus petit que les agents
-        portrayal["marker"] = "o"
+        portrayal["marker"] = "^"
         portrayal["zorder"] = 3
 
     elif isinstance(agent, yellowAgent):
