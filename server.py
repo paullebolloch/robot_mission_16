@@ -44,7 +44,7 @@ model_params = {
     },
     "n_green_waste": {
         "type": "SliderInt",
-        "value": 8,
+        "value": 16,
         "label": "Number of green waste:",
         "min": 0,
         "max": 20,
@@ -52,7 +52,7 @@ model_params = {
     },
     "n_yellow_waste": {
         "type": "SliderInt",
-        "value": 8,
+        "value": 0,
         "label": "Number of yellow waste:",
         "min": 0,
         "max": 20,
@@ -60,7 +60,7 @@ model_params = {
     },
     "n_red_waste": {
         "type": "SliderInt",
-        "value": 8,
+        "value": 0,
         "label": "Number of red waste:",
         "min": 0,
         "max": 20,

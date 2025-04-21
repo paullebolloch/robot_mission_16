@@ -30,7 +30,6 @@ class CleaningAgent(CommunicatingAgent):
         for agent in self.knowledge["neighbor_radioactivity_agent"]:
             if agent.pos == (x, y):
                 return agent.radioactivity
-        print("information undisclosed")
         return -1
 
     def get_waste(self, position) -> list:
@@ -61,7 +60,18 @@ class CleaningAgent(CommunicatingAgent):
     def do(self):
         return self.next_action[-1]
 
-    def step(self):
+    #def step(self):
+    #    print(f"STEP START — {self.get_name()}")
+    #    super().step()
+    #   self.deliberate()
+    #    action = self.do()
+    #    percepts = self.model.do(self, action)
+    #    self.perceive(percepts)
+    #    print(f"STEP END — {self.get_name()}")
+    def step_messages_only(self):
+        super().step()  # permet à CommunicatingAgent de traiter les messages
+
+    def step_logic_only(self):
         self.deliberate()
         action = self.do()
         percepts = self.model.do(self, action)
@@ -90,6 +100,7 @@ class greenAgent(CleaningAgent):
                         content={"type": "drop", "position": self.pos}
                     )
                     self.send_message(msg)
+
             return
 
         # Si l'agent est sur une case de déchet vert et qu'il n'a pas de déchet jaune...
@@ -127,9 +138,6 @@ class greenAgent(CleaningAgent):
         # Action par défault : se déplacer en random      
         self.next_action.append("move_random")
 
-        print(self.next_action[-1])
-        print(self.knowledge["possible_steps"])
-
 
 class yellowAgent(CleaningAgent):
     def __init__(self, model):
@@ -146,7 +154,8 @@ class yellowAgent(CleaningAgent):
                 content = message.get_content()
                 if content.get("type") == "drop" and self.target is None:
                     self.target = content.get("position")
-
+        print(f"yellow message: {self.get_new_messages()}")
+        
         right_cell = (x + 1, y)
         if self.get_radioactivity(right_cell) >= 0.66 and self.hold == [0, 0, 1] and self.get_waste(self.pos)[0] is None:
             self.next_action.append("drop")
@@ -177,11 +186,27 @@ class yellowAgent(CleaningAgent):
             if p not in impossible_steps
         ]
 
-        if self.target:
+        print(f"yellow target: {self.target}")
+        if self.target and self.hold != [0, 0, 1] :
             move = choose_move_to_target(self.target, self.pos, self.knowledge["possible_steps"])
             self.next_action.append(f"move_{move}")
-        else:
-            self.next_action.append("move_random")
+            print(f"yellow move: {move}")
+            return
+        
+        
+        # Si l'agent vert a un déchet rouge, il doit se déplacer vers la frontière
+        if self.hold == [0, 0, 1]:
+            if self.get_radioactivity(right_cell) >= 0.66 and self.get_waste(self.pos)[0] is not None:
+                if (x,y+1) in self.knowledge["possible_steps"]:
+                    self.next_action.append("move_up")
+                    return
+                elif (x,y-1) in self.knowledge["possible_steps"]:
+                    self.next_action.append("move_down")
+                    return
+            self.next_action.append("move_right")
+            return
+        
+        self.next_action.append("move_random")
 
 
 class redAgent(CleaningAgent):

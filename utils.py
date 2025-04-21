@@ -12,23 +12,23 @@ def next_waste_color(color):
                 print("color is red : not next color")
 
 
-# Aller en direction de la target sans sratégie 
+# Aller en direction de la target sans stratégie 
 
 def choose_move_to_target(target, pos, posible_steps):
     t1, t2 = target[0], target[1]
     a1, a2 = pos[0], pos[1]
-    if a1<t1:
-        if (a1+1, a2) in posible_steps:
+    if a1>t1:
+        if (a1-1, a2) in posible_steps:
             return "left"
     if a2<t2:
         if (a1, a2+1) in posible_steps:
             return "up" 
-    if a1>t1:
-        if (a1-1, a2) in posible_steps:
+    if a1<t1:
+        if (a1+1, a2) in posible_steps:
             return "right"
     if a2>t2:
         if (a1, a2-1) in posible_steps:
             return "down"
     else :
-        return 'stay'
+        return 'random'
 

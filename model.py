@@ -287,16 +287,33 @@ class MyModel(SpeakingModel):
 
 
 
-    def step(self):
-        """One step of the model: ask each agent what they want to do, and execute it."""
-        self.datacollector.collect(self)
-        self.agents.shuffle_do("step")
+    #def step(self):
+    #    """One step of the model: ask each agent what they want to do, and execute it."""
+    #   self.datacollector.collect(self)
+    #    self.agents.shuffle_do("step")
          # Récupération des données
         #df = self.datacollector.get_model_vars_dataframe()
         #print("Collected data:")
         #print(df)
 
+    def step(self):
+        """One step of the model: handle messaging and agent actions in two random phases."""
+        self.datacollector.collect(self)
 
+        super().step()
+        # Phase 1 : tous les agents reçoivent les messages
+        agents_list = list(self.agents)
+        self.random.shuffle(agents_list)
+        for agent in agents_list:
+            if hasattr(agent, "step_messages_only"):
+                agent.step_messages_only()
+
+        # Phase 2 : tous les agents délibèrent et agissent
+        agents_list = list(self.agents)
+        self.random.shuffle(agents_list)
+        for agent in agents_list:
+            if hasattr(agent, "step_logic_only"):
+                agent.step_logic_only()
 
 
 
