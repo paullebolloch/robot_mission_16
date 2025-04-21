@@ -77,7 +77,7 @@ class greenAgent(CleaningAgent):
         x, y = self.pos
         right_cell = (x + 1, y)
 
-        if self.get_radioactivity(right_cell) >= 0.33 and self.hold == [0, 1, 0]:
+        if self.get_radioactivity(right_cell) >= 0.33 and self.hold == [0, 1, 0] and self.get_waste(self.pos)[0] is None:
             self.next_action.append("drop")
             for other_agent in self.model.agents:
                 if isinstance(other_agent, yellowAgent) and other_agent != self:
@@ -126,7 +126,7 @@ class yellowAgent(CleaningAgent):
                     self.target = content.get("position")
 
         right_cell = (x + 1, y)
-        if self.get_radioactivity(right_cell) >= 0.66 and self.hold == [0, 0, 1]:
+        if self.get_radioactivity(right_cell) >= 0.66 and self.hold == [0, 0, 1] and self.get_waste(self.pos)[0] is None:
             self.next_action.append("drop")
             for other_agent in self.model.agents:
                 if isinstance(other_agent, redAgent) and other_agent != self:

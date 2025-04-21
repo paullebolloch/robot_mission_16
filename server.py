@@ -20,7 +20,7 @@ def compute_gini(model):
 model_params = {
     "n_green_agents": {
         "type": "SliderInt",
-        "value": 10,
+        "value": 1,
         "label": "Number of green agents:",
         "min": 0,
         "max": 20,
@@ -28,7 +28,7 @@ model_params = {
     },
     "n_yellow_agents": {
         "type": "SliderInt",
-        "value": 10,
+        "value": 1,
         "label": "Number of yellow agents:",
         "min": 0,
         "max": 20,
@@ -36,7 +36,7 @@ model_params = {
     },
     "n_red_agents": {
         "type": "SliderInt",
-        "value": 10,
+        "value": 1,
         "label": "Number of red agents:",
         "min": 0,
         "max": 20,
@@ -44,7 +44,7 @@ model_params = {
     },
     "n_green_waste": {
         "type": "SliderInt",
-        "value": 10,
+        "value": 8,
         "label": "Number of green waste:",
         "min": 0,
         "max": 20,
@@ -52,7 +52,7 @@ model_params = {
     },
     "n_yellow_waste": {
         "type": "SliderInt",
-        "value": 10,
+        "value": 8,
         "label": "Number of yellow waste:",
         "min": 0,
         "max": 20,
@@ -60,7 +60,7 @@ model_params = {
     },
     "n_red_waste": {
         "type": "SliderInt",
-        "value": 10,
+        "value": 8,
         "label": "Number of red waste:",
         "min": 0,
         "max": 20,
