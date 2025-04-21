@@ -77,7 +77,9 @@ class greenAgent(CleaningAgent):
         x, y = self.pos
         right_cell = (x + 1, y)
 
+        # Si l'agent est sur la frontière, qu'il porte un déchet jaune et qu'il n'y a pas de déchet déjà sur la case...
         if self.get_radioactivity(right_cell) >= 0.33 and self.hold == [0, 1, 0] and self.get_waste(self.pos)[0] is None:
+            # ... il drop et envoie un message à l'agent jaune
             self.next_action.append("drop")
             for other_agent in self.model.agents:
                 if isinstance(other_agent, yellowAgent) and other_agent != self:
@@ -90,10 +92,14 @@ class greenAgent(CleaningAgent):
                     self.send_message(msg)
             return
 
+        # Si l'agent est sur une case de déchet vert et qu'il n'a pas de déchet jaune...
         if self.get_waste(self.pos)[1] == [1, 0, 0] and self.hold != [0, 1, 0]:
+            # ...il merge s'il a déjà un déchet vert et pick s'il n'a rien
             self.next_action.append("merge" if self.hold == [1, 0, 0] else "pick")
             return
-
+       
+        # Un agent mobile ne peut pas se déplacer sur une case occupée par un autre agent mobile
+        # Un agent vert doit rester dans une case avec une radioactivité inférieure à 0.33
         impossible_steps = [
             agent.pos for agent in self.knowledge["neighbor_robot"]
         ] + [
@@ -106,7 +112,23 @@ class greenAgent(CleaningAgent):
             if p not in impossible_steps
         ]
 
+        # Si l'agent vert a un déchet jaune, il doit se déplacer vers la frontière
+        if self.hold == [0, 1, 0]:
+            if self.get_radioactivity(right_cell) >= 0.33 and self.get_waste(self.pos)[0] is not None:
+                if (x,y+1) in self.knowledge["possible_steps"]:
+                    self.next_action.append("move_up")
+                    return
+                elif (x,y-1) in self.knowledge["possible_steps"]:
+                    self.next_action.append("move_down")
+                    return
+            self.next_action.append("move_right")
+            return
+
+        # Action par défault : se déplacer en random      
         self.next_action.append("move_random")
+
+        print(self.next_action[-1])
+        print(self.knowledge["possible_steps"])
 
 
 class yellowAgent(CleaningAgent):
