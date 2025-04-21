@@ -8,6 +8,8 @@ from communication.message.MessageService import MessageService
 from objects import RadioactivityAgent, Waste, WasteDisposalZone
 from utils import next_waste_color
 
+import numpy as np
+
 
 class SpeakingModel(mesa.Model):
     """ """
@@ -71,11 +73,11 @@ class MyModel(SpeakingModel):
         yellow_waste = Waste.create_agents(model=self,n=n_yellow_waste, color = "yellow")
         red_waste = Waste.create_agents(model=self, n=n_red_waste, color = "red")
 
-        z1 = RadioactivityAgent.create_agents(model=self, n=width//3 * height, zone = "z1")
-        z2 = RadioactivityAgent.create_agents(model=self, n=width//3 * height, zone = "z2")
-        z3 = RadioactivityAgent.create_agents(model=self, n=width//3 * height, zone = "z3")
+        z1 = RadioactivityAgent.create_agents(model=self, n=(width//3) * height, zone = "z1")
+        z2 = RadioactivityAgent.create_agents(model=self, n=(width//3) * height, zone = "z2")
+        z3 = RadioactivityAgent.create_agents(model=self, n=(width//3 - 1) * height, zone = "z3")
 
-        waste_disposal_zone = WasteDisposalZone.create_agents(model=self, n=1, zone = "z3")
+        waste_disposal_zone = WasteDisposalZone.create_agents(model=self, n=height, zone = "z3")
 
         # Create x and y positions for green agents
         x = self.rng.integers(0, self.grid.width//3, size=(n_green_agents,))
@@ -100,13 +102,18 @@ class MyModel(SpeakingModel):
 
 
         # Positionner la disposal zone
-        self.grid.place_agent(waste_disposal_zone[0], (width-1,height//2))
+        y = np.array([k for k in range(self.grid.height)])
+        x = np.array([height-1 for _ in range(self.grid.height)])
+        for a, i, j in zip(waste_disposal_zone, x, y):
+            # Add the agent to a random grid cell
+            self.grid.place_agent(a, (i, j))
+       
 
 
         # Positionner les déchets
         x_z1 = self.rng.integers(0, width//3, size=(n_green_waste,))
         x_z2 = self.rng.integers(width//3, 2*width//3, size=(n_yellow_waste,))
-        x_z3 = self.rng.integers(2*width//3, width, size=(n_red_waste,))
+        x_z3 = self.rng.integers(2*width//3, width-1, size=(n_red_waste,))
         y = self.rng.integers(0, height, size=(n_green_waste+n_yellow_waste+n_red_waste,))
 
         for a, i, j in zip(green_waste, x_z1, y):
@@ -133,7 +140,7 @@ class MyModel(SpeakingModel):
             self.grid.place_agent(a, (i, j))
 
         # Zone z3 (rouge)
-        z3_coords = list(product(range(2 * width // 3, width), range(height)))
+        z3_coords = list(product(range(2 * width // 3, width-1), range(height)))
         for a, (i, j) in zip(z3, z3_coords):
             self.grid.place_agent(a, (i, j))
 
@@ -193,10 +200,10 @@ class MyModel(SpeakingModel):
                     agent.hold[2] = 0
                 elif isinstance(agent, redAgent):
                     coord = agent.pos
-                    self.grid.place_agent(agent.has_waste, coord)
-                    waste_to_remove = agent.has_waste
-                    self.grid.remove_agent(waste_to_remove)
-                    agent.has_waste.remove()
+                    if agent.has_waste is not None:
+                        self.grid.place_agent(agent.has_waste, coord)
+                        self.grid.remove_agent(agent.has_waste)
+                        agent.has_waste.remove()
                     agent.has_waste = None
                     agent.hold[2] = 0
 
@@ -236,11 +243,11 @@ class MyModel(SpeakingModel):
                 agent.has_waste = waste
 
                 if isinstance(agent, greenAgent):
-                    agent.hold = [1, 0, 0]
+                    agent.hold[0] += 1
                 elif isinstance(agent, yellowAgent):
-                    agent.hold = [0, 1, 0]
+                    agent.hold[1] += 1
                 elif isinstance(agent, redAgent):
-                    agent.hold = [0, 0, 1]
+                    agent.hold[2] += 1
                 
         #percepts = self.grid.get_neighbors(agent.pos, moore=False, include_center=True)
         
