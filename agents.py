@@ -90,7 +90,7 @@ class greenAgent(CleaningAgent):
                     self.send_message(msg)
             return
 
-        if self.get_waste(self.pos)[1] == [1, 0, 0]:
+        if self.get_waste(self.pos)[1] == [1, 0, 0] and self.hold != [0, 1, 0]:
             self.next_action.append("merge" if self.hold == [1, 0, 0] else "pick")
             return
 
@@ -139,7 +139,7 @@ class yellowAgent(CleaningAgent):
                     self.send_message(msg)
             return
 
-        if self.get_waste(self.pos)[1] == [0, 1, 0]:
+        if self.get_waste(self.pos)[1] == [0, 1, 0] and self.hold != [0, 0, 1]:
             self.next_action.append("merge" if self.hold == [0, 1, 0] else "pick")
             return
 
